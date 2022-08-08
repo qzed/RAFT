@@ -136,6 +136,7 @@ __global__ void corr_backward_kernel(
     torch::PackedTensorAccessor32<scalar_t,5,torch::RestrictPtrTraits> coords_grad,
     int r)
 {
+  // NOTE: Does not comute coords_grad
 
   const int b = blockIdx.x;
   const int h0 = blockIdx.y * blockDim.x;
