@@ -41,6 +41,9 @@ __global__ void corr_forward_kernel(
   __shared__ scalar_t y2s[BLOCK_HW];
 
   for (int c=0; c<C; c+=CHANNEL_STRIDE) {
+
+     __syncthreads();
+
     for (int k=0; k<BLOCK_HW; k+=BLOCK_HW/CHANNEL_STRIDE) {
       int k1 = k + tid / CHANNEL_STRIDE;
       int h1 = h0 + k1 / BLOCK_W;
@@ -70,6 +73,9 @@ __global__ void corr_forward_kernel(
       int rd = 2*r + 1;
       for (int iy=0; iy<rd+1; iy++) {
         for (int ix=0; ix<rd+1; ix++) {
+
+          __syncthreads();
+
           for (int k=0; k<BLOCK_HW; k+=BLOCK_HW/CHANNEL_STRIDE) {
             int k1 = k + tid / CHANNEL_STRIDE;
             int h2 = static_cast<int>(floor(y2s[k1]))-r+iy;
