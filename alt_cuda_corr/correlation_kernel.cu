@@ -150,11 +150,11 @@ __global__ void corr_backward_kernel(
   const int N = coords.size(1);
   const int C = fmap1.size(3);
 
-  __shared__ scalar_t f1[CHANNEL_STRIDE][BLOCK_HW+1];
-  __shared__ scalar_t f2[CHANNEL_STRIDE][BLOCK_HW+1];
+  __shared__ scalar_t f1[CHANNEL_STRIDE][BLOCK_HW];
+  __shared__ scalar_t f2[CHANNEL_STRIDE][BLOCK_HW];
 
-  __shared__ scalar_t f1_grad[CHANNEL_STRIDE][BLOCK_HW+1];
-  __shared__ scalar_t f2_grad[CHANNEL_STRIDE][BLOCK_HW+1];
+  __shared__ scalar_t f1_grad[CHANNEL_STRIDE][BLOCK_HW];
+  __shared__ scalar_t f2_grad[CHANNEL_STRIDE][BLOCK_HW];
 
   __shared__ scalar_t x2s[BLOCK_HW];
   __shared__ scalar_t y2s[BLOCK_HW];
