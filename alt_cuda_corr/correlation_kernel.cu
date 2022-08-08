@@ -48,7 +48,7 @@ __global__ void corr_forward_kernel(
       int c1 = tid % CHANNEL_STRIDE;
 
       auto fptr = fmap1[b][h1][w1];
-      if (within_bounds(h1, w1, H1, W1))
+      if (within_bounds(h1, w1, H1, W1) && c + c1 < C)
         f1[c1][k1] = fptr[c+c1];
       else
         f1[c1][k1] = 0.0;
@@ -77,7 +77,7 @@ __global__ void corr_forward_kernel(
             int c2 = tid % CHANNEL_STRIDE;
 
             auto fptr = fmap2[b][h2][w2];
-            if (within_bounds(h2, w2, H2, W2))
+            if (within_bounds(h2, w2, H2, W2) && c + c2 < C)
               f2[c2][k1] = fptr[c+c2];
             else
               f2[c2][k1] = 0.0;
