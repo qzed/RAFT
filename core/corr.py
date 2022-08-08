@@ -60,6 +60,34 @@ class CorrBlock:
         return corr / torch.sqrt(torch.tensor(dim).float())
 
 
+class AltCorrFunction(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, fmap1, fmap2, coords, radius):
+        fmap1 = fmap1.to(dtype=torch.float)
+        fmap2 = fmap2.to(dtype=torch.float)
+        coords = coords.to(dtype=torch.float)
+
+        ctx.radius = radius
+        ctx.save_for_backward(fmap1, fmap2, coords)
+
+        corr, = alt_cuda_corr.forward(fmap1, fmap2, coords, radius)
+
+        return corr
+
+    @staticmethod
+    def backward(ctx, d_corr):
+        radius = ctx.radius
+        fmap1, fmap2, coords = ctx.saved_tensors
+
+        d_fmap1, d_fmap2, d_coords = alt_cuda_corr.backward(fmap1, fmap2, coords, d_corr, radius)
+
+        return d_fmap1, d_fmap2, d_coords, None
+
+
+def alt_corr(fmap1, fmap2, coords, radius):
+    return AltCorrFunction.apply(fmap1, fmap2, coords, radius)
+
+
 class AlternateCorrBlock:
     def __init__(self, fmap1, fmap2, num_levels=4, radius=4):
         self.num_levels = num_levels
@@ -83,7 +111,7 @@ class AlternateCorrBlock:
             fmap2_i = self.pyramid[i][1].permute(0, 2, 3, 1).contiguous()
 
             coords_i = (coords / 2**i).reshape(B, 1, H, W, 2).contiguous()
-            corr, = alt_cuda_corr.forward(fmap1_i, fmap2_i, coords_i, r)
+            corr = alt_corr(fmap1_i, fmap2_i, coords_i, r)
             corr_list.append(corr.squeeze(1))
 
         corr = torch.stack(corr_list, dim=1)
