@@ -184,8 +184,10 @@ __global__ void corr_backward_kernel(
     int w1 = w0 + threadIdx.y;
 
     for (int n=0; n<N; n++) {
-      x2s[tid] = coords[b][n][h1][w1][0];
-      y2s[tid] = coords[b][n][h1][w1][1];
+      if (within_bounds(h1, w1, H1, W1)) {
+        x2s[tid] = coords[b][n][h1][w1][0];
+        y2s[tid] = coords[b][n][h1][w1][1];
+      }
 
       scalar_t dx = x2s[tid] - floor(x2s[tid]);
       scalar_t dy = y2s[tid] - floor(y2s[tid]);
