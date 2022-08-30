@@ -1,4 +1,5 @@
 #include <torch/extension.h>
+#include <c10/cuda/CUDAGuard.h>
 #include <vector>
 
 // CUDA forward declarations
@@ -29,6 +30,8 @@ std::vector<torch::Tensor> corr_forward(
   CHECK_INPUT(fmap2);
   CHECK_INPUT(coords);
 
+  const at::cuda::OptionalCUDAGuard device_guard(device_of(coords));
+
   return corr_cuda_forward(fmap1, fmap2, coords, radius);
 }
 
@@ -43,6 +46,8 @@ std::vector<torch::Tensor> corr_backward(
   CHECK_INPUT(fmap2);
   CHECK_INPUT(coords);
   CHECK_INPUT(corr_grad);
+
+  const at::cuda::OptionalCUDAGuard device_guard(device_of(coords));
 
   return corr_cuda_backward(fmap1, fmap2, coords, corr_grad, radius);
 }
