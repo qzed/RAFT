@@ -75,6 +75,7 @@ class AltCorrFunction(torch.autograd.Function):
         radius = ctx.radius
         fmap1, fmap2, coords = ctx.saved_tensors
 
+        d_corr = d_corr.contiguous()
         d_fmap1, d_fmap2, d_coords = alt_cuda_corr.backward(fmap1, fmap2, coords, d_corr, radius)
 
         return d_fmap1, d_fmap2, d_coords, None
