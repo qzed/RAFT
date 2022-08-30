@@ -10,6 +10,18 @@
 #define CHANNEL_STRIDE 32
 
 
+static __forceinline__  __device__ at::Half gpuAtomicAdd(at::Half *address, at::Half val) {
+  return atomicAdd(reinterpret_cast<__half*>(address), val);
+}
+
+static __forceinline__  __device__ float gpuAtomicAdd(float *address, float val) {
+  return atomicAdd(address, val);
+}
+
+static __forceinline__  __device__ double gpuAtomicAdd(double *address, double val) {
+  return atomicAdd(address, val);
+}
+
 __forceinline__ __device__
 bool within_bounds(int h, int w, int H, int W) {
   return h >= 0 && h < H && w >= 0 && w < W;
@@ -248,7 +260,7 @@ __global__ void corr_backward_kernel(
 
             scalar_t* fptr = &fmap2_grad[b][h2][w2][0];
             if (within_bounds(h2, w2, H2, W2) && c + c2 < C)
-              atomicAdd(fptr+c+c2, f2_grad[c2][k1]);
+              gpuAtomicAdd(fptr+c+c2, f2_grad[c2][k1]);
           }
         }
       }
@@ -289,12 +301,14 @@ std::vector<torch::Tensor> corr_cuda_forward(
   const dim3 blocks(B, (H+BLOCK_H-1)/BLOCK_H, (W+BLOCK_W-1)/BLOCK_W);
   const dim3 threads(BLOCK_H, BLOCK_W);
 
-  corr_forward_kernel<float><<<blocks, threads>>>(
-    fmap1.packed_accessor32<float,4,torch::RestrictPtrTraits>(),
-    fmap2.packed_accessor32<float,4,torch::RestrictPtrTraits>(),
-    coords.packed_accessor32<float,5,torch::RestrictPtrTraits>(),
-    corr.packed_accessor32<float,5,torch::RestrictPtrTraits>(),
-    radius);
+  AT_DISPATCH_FLOATING_TYPES_AND_HALF(coords.scalar_type(), "corr_cuda_forward", [&]() {
+    corr_forward_kernel<scalar_t><<<blocks, threads>>>(
+      fmap1.packed_accessor32<scalar_t,4,torch::RestrictPtrTraits>(),
+      fmap2.packed_accessor32<scalar_t,4,torch::RestrictPtrTraits>(),
+      coords.packed_accessor32<scalar_t,5,torch::RestrictPtrTraits>(),
+      corr.packed_accessor32<scalar_t,5,torch::RestrictPtrTraits>(),
+      radius);
+  });
 
   return {corr};
 }
@@ -323,16 +337,17 @@ std::vector<torch::Tensor> corr_cuda_backward(
   const dim3 blocks(B, (H1+BLOCK_H-1)/BLOCK_H, (W1+BLOCK_W-1)/BLOCK_W);
   const dim3 threads(BLOCK_H, BLOCK_W);
 
-
-  corr_backward_kernel<float><<<blocks, threads>>>(
-    fmap1.packed_accessor32<float,4,torch::RestrictPtrTraits>(),
-    fmap2.packed_accessor32<float,4,torch::RestrictPtrTraits>(),
-    coords.packed_accessor32<float,5,torch::RestrictPtrTraits>(),
-    corr_grad.packed_accessor32<float,5,torch::RestrictPtrTraits>(),
-    fmap1_grad.packed_accessor32<float,4,torch::RestrictPtrTraits>(),
-    fmap2_grad.packed_accessor32<float,4,torch::RestrictPtrTraits>(),
-    coords_grad.packed_accessor32<float,5,torch::RestrictPtrTraits>(),
-    radius);
+  AT_DISPATCH_FLOATING_TYPES_AND_HALF(coords.scalar_type(), "corr_cuda_backward", [&]() {
+    corr_backward_kernel<scalar_t><<<blocks, threads>>>(
+      fmap1.packed_accessor32<scalar_t,4,torch::RestrictPtrTraits>(),
+      fmap2.packed_accessor32<scalar_t,4,torch::RestrictPtrTraits>(),
+      coords.packed_accessor32<scalar_t,5,torch::RestrictPtrTraits>(),
+      corr_grad.packed_accessor32<scalar_t,5,torch::RestrictPtrTraits>(),
+      fmap1_grad.packed_accessor32<scalar_t,4,torch::RestrictPtrTraits>(),
+      fmap2_grad.packed_accessor32<scalar_t,4,torch::RestrictPtrTraits>(),
+      coords_grad.packed_accessor32<scalar_t,5,torch::RestrictPtrTraits>(),
+      radius);
+  });
 
   return {fmap1_grad, fmap2_grad, coords_grad};
 }

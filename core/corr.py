@@ -63,10 +63,6 @@ class CorrBlock:
 class AltCorrFunction(torch.autograd.Function):
     @staticmethod
     def forward(ctx, fmap1, fmap2, coords, radius):
-        fmap1 = fmap1.to(dtype=torch.float)
-        fmap2 = fmap2.to(dtype=torch.float)
-        coords = coords.to(dtype=torch.float)
-
         ctx.radius = radius
         ctx.save_for_backward(fmap1, fmap2, coords)
 
